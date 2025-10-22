@@ -3,7 +3,8 @@
 **Miramine** adalah platform **web streaming anime** modern yang dibangun menggunakan **Nextjs**.
 Dengan tampilan elegan, performa ringan, dan fitur lengkap, MiraMine memberikan pengalaman menonton anime yang cepat, responsif, dan bebas gangguan di berbagai perangkat.
 
----
+<img width="1920" height="1080" alt="Miramine web" src="https://github.com/user-attachments/assets/8abccca9-fa76-48c3-ad3f-e2a69168f00d" />
+
 
 ## 🚀 Fitur Utama
 
