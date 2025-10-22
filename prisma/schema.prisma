@@ -1,0 +1,314 @@
+generator kysely {
+  provider     = "prisma-kysely"
+  output       = "../src/db"
+  enumFileName = "enums.ts"
+  fileName     = "types.ts"
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["typedSql"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model anime {
+  id                       String                     @id @unique
+  title_show               String                     @default("")
+  title                    String                     @default("")
+  title_en                 String                     @default("")
+  title_id                 String                     @default("")
+  title_jp                 String                     @default("")
+  title_synonym            String
+  synopsis                 String                     @default("")
+  type                     AnimeType                  @default(OTHER)
+  sub_type                 String                     @default("TV")
+  mal_id                   Int                        @default(0)
+  anilist_id               Int                        @default(0)
+  image_url                String?
+  description              String                     @default("")
+  status                   AnimeStatus                @default(ONGOING)
+  last_episode             String                     @default("")
+  created_at               DateTime                   @default(now())
+  updated_at               DateTime
+  views                    Int                        @default(0)
+  likes                    Int                        @default(0)
+  dislikes                 Int                        @default(0)
+  mal_data                 Json                       @default("{}")
+  anilist_data             Json                       @default("{}")
+  anime_history            anime_history[]
+  bookmark                 bookmark[]
+  comments                 comments[]
+  episode                  episode[]
+  like_dislike             like_dislike[]
+  genres                   genres[]                   @relation("AnimeToGenres")
+  third_party_anime_source third_party_anime_source[] @relation("AnimeToThirdPartyAnimeSource")
+}
+
+model anime_history {
+  id              String               @id @unique
+  last_episode    String               @default("0")
+  status          EpisodeHistoryStatus @default(WATCHING)
+  anime_id        String
+  user_id         String
+  created_at      DateTime             @default(now())
+  updated_at      DateTime
+  anime           anime                @relation(fields: [anime_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  Users           users                @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  episode_history episode_history[]
+}
+
+model episode {
+  id                         String                       @id @unique
+  title                      String
+  episode                    String                       @default("")
+  order                      Int                          @default(0)
+  image_url                  String?
+  created_at                 DateTime                     @default(now())
+  updated_at                 DateTime
+  views                      Int                          @default(0)
+  likes                      Int                          @default(0)
+  dislikes                   Int                          @default(0)
+  anime_id                   String
+  anime                      anime                        @relation(fields: [anime_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  episode_history            episode_history[]
+  stream_source              stream_source[]
+  third_party_episode_source third_party_episode_source[] @relation("EpisodeToThirdPartyEpisodeSource")
+}
+
+model episode_history {
+  id                String               @id @unique
+  status            EpisodeHistoryStatus @default(WATCHING)
+  episode_duration  Int                  @default(0)
+  watching_duration Int                  @default(0)
+  order             Int                  @default(0)
+  anime_history_id  String
+  episode_id        String
+  created_at        DateTime             @default(now())
+  updated_at        DateTime
+  anime_history     anime_history        @relation(fields: [anime_history_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  episode           episode              @relation(fields: [episode_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model stream_source {
+  id         String           @id @unique
+  title      String           @default("LOKAL")
+  url        String
+  created_at DateTime         @default(now())
+  updated_at DateTime
+  type       StreamType       @default(EMBED)
+  quality    StreamQuality    @default(UNKNOWN)
+  provider   StreamProvider   @default(OTHER)
+  format     StreamFormat     @default(MP4)
+  episode_id String
+  is_from    ThirdPartySource @default(OTHER)
+  episode    episode          @relation(fields: [episode_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model bookmark {
+  id         String   @id @unique
+  anime_id   String
+  user_id    String
+  created_at DateTime @default(now())
+  anime      anime    @relation(fields: [anime_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model comments {
+  id             Int              @id @unique @default(autoincrement())
+  text           String
+  is_deleted     Boolean          @default(false)
+  user_id        String
+  anime_id       String
+  created_at     DateTime         @default(now())
+  updated_at     DateTime
+  anime          anime            @relation(fields: [anime_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users          users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  comments_reply comments_reply[]
+}
+
+model comments_reply {
+  id         Int      @id @unique @default(autoincrement())
+  text       String
+  is_deleted Boolean  @default(false)
+  user_id    String
+  comment_id Int
+  created_at DateTime @default(now())
+  updated_at DateTime
+  comments   comments @relation(fields: [comment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model genres {
+  id         String   @id @unique
+  name       String
+  created_at DateTime @default(now())
+  updated_at DateTime
+  anime      anime[]  @relation("AnimeToGenres")
+}
+
+model like_dislike {
+  id         Int             @id @unique @default(autoincrement())
+  user_id    String
+  anime_id   String
+  type       LikeDislikeType
+  created_at DateTime        @default(now())
+  updated_at DateTime
+  anime      anime           @relation(fields: [anime_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model notification_token {
+  id         String   @id @unique
+  user_id    String
+  token      String
+  created_at DateTime @default(now())
+  updated_at DateTime
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model third_party_anime_source {
+  id        String           @id @unique
+  source    ThirdPartySource @default(OTHER)
+  source_id String
+  anime     anime[]          @relation("AnimeToThirdPartyAnimeSource")
+}
+
+model third_party_episode_source {
+  id        String           @id @unique
+  source    ThirdPartySource @default(OTHER)
+  source_id String
+  episode   episode[]        @relation("EpisodeToThirdPartyEpisodeSource")
+}
+
+model users {
+  id                 String               @id @unique
+  oauth_id           String               @unique
+  name               String
+  email              String               @unique
+  avatar             String
+  watch_time         Decimal              @default(0)
+  is_verified        Boolean              @default(false)
+  is_banned          Boolean              @default(false)
+  device_id          String?
+  token              String?
+  created_at         DateTime             @default(now())
+  updated_at         DateTime
+  role               UserRole             @default(USER)
+  anime_history      anime_history[]
+  bookmark           bookmark[]
+  comments           comments[]
+  comments_reply     comments_reply[]
+  like_dislike       like_dislike[]
+  login_history      login_history[]
+  notification_token notification_token[]
+}
+
+model login_history {
+  id                       String    @id @unique
+  device_id                String?
+  ip_address               String?
+  user_agent               String?
+  access_token             String?
+  access_token_expires_at  DateTime?
+  refresh_token            String?
+  refresh_token_expires_at DateTime?
+  created_at               DateTime  @default(now())
+  updated_at               DateTime
+  user_id                  String
+  users                    users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+enum AnimeStatus {
+  ONGOING
+  COMPLETED
+  NOT_YET_RELEASED
+  CANCELLED
+}
+
+enum EpisodeHistoryStatus {
+  WATCHING
+  COMPLETED
+  DROPPED
+  PAUSED
+}
+
+enum LikeDislikeType {
+  LIKE
+  DISLIKE
+}
+
+enum StreamFormat {
+  MP4
+  MKV
+  AVI
+  FLV
+  MOV
+  WMV
+  WEBM
+  M3U8
+  MPD
+  HLS
+  DASH
+  OTHER
+}
+
+enum StreamProvider {
+  PIXELDRAIN
+  MIXDROP
+  RAPIDVIDEO
+  MP4UPLOAD
+  UPTOSTREAM
+  KRAKENFILES
+  STREAMSB
+  DAILYMOTION
+  YOUTUBE
+  DIRECT
+  EXAFILES
+  MYSTORAGEINDO
+  GOOGLEDRIVE
+  MEGA
+  R2
+  OTHER
+  BACKUP
+}
+
+enum StreamQuality {
+  LOW
+  MEDIUM
+  HIGH
+  HD
+  FULLHD
+  ULTRAHD
+  UNKNOWN
+}
+
+enum StreamType {
+  EMBED
+  DIRECT
+}
+
+enum AnimeType {
+  ANIME
+  DONGHUA
+  OTHER
+}
+
+enum ThirdPartySource {
+  ANIMEPLAY
+  DONGHUB
+  KURONIME
+  ANIMEIN
+  WIBUKU
+  ANIMEINDO
+  OTHER
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}

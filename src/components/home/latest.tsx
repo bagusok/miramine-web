@@ -1,0 +1,84 @@
+import ImageFallback from "./image-fallback";
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { db } from "@/db";
+import { getRelativeTime } from "@/lib/format";
+
+export default async function LatestAnime() {
+  const anime = await getAnime(12, 0);
+
+  return (
+    <section className="">
+      <div className="mb-6 flex justify-between items-end">
+        <h3 className="text-xl font-semibold text-primary">Episode Terbaru</h3>
+        <Link
+          href="/anime/latest"
+          className="inline-flex items-center space-x-1 text-sm hover:opacity-80"
+        >
+          Lihat Semua
+          <ChevronRight size={12} />
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 justify-start">
+        {anime.map((episode) => (
+          <Link key={episode.episode_id} href={`/anime/${episode.anime_id}`}>
+            <div className="rounded-lg w-full overflow-hidden h-fit">
+              <div className="w-full overflow-hidden rounded-xl aspect-auto relative h-60">
+                <ImageFallback
+                  src={episode.image_url ?? ""}
+                  fallbackSrc="/preview-not-available.webp"
+                  alt="thumbnail"
+                  width={200}
+                  height={300}
+                  className="rounded-lg object-cover z-10 h-full"
+                />
+                <h3 className="text-sm z-30 absolute bottom-2 left-2 line-clamp-1">
+                  Episode {episode.episode}
+                </h3>
+                <span className="absolute bottom-0 left-0 right-0 z-20 h-1/2 bg-gradient-to-t from-primary-foreground"></span>
+              </div>
+              <div className="mt-2">
+                <p className="font-medium line-clamp-2">
+                  {episode.anime_title}
+                </p>
+                <h3 className="text-xs italic line-clamp-1 mt-2 text-muted-foreground">
+                  {getRelativeTime(episode.created_at)}
+                </h3>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const getAnime = async (limit = 12, offset = 0) => {
+  const anime = await db
+    .with("latest_episodes", (qb) =>
+      qb
+        .selectFrom("anime as a")
+        .distinctOn("a.id")
+        .innerJoin("episode as e", "e.anime_id", "a.id")
+        .select([
+          "a.id as anime_id",
+          "e.id as episode_id",
+          "a.title as anime_title",
+          "e.title as episode_title",
+          "a.image_url",
+          "e.episode",
+          "a.mal_data",
+          "e.created_at",
+        ])
+        .orderBy("a.id")
+        .orderBy("e.created_at", "desc")
+    )
+    .selectFrom("latest_episodes")
+    .selectAll()
+    .orderBy("created_at", "desc")
+    .limit(limit)
+    .offset(offset)
+    .execute();
+
+  return anime;
+};
